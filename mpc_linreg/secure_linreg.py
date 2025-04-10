@@ -2,6 +2,7 @@ import sys
 from mpyc.runtime import mpc
 from data_loader import load_party_data
 from regression import secure_linear_regression
+from visualization import plot_actual_vs_predicted
 
 def print_usage():
     print("Usage: python secure_linreg.py [MPyC options] <dataset.csv>")
@@ -26,15 +27,25 @@ async def main():
     await mpc.start()
 
     # Broadcast data to all parties securely
-    X_all = await mpc.gather(mpc.transfer(X_local))
-    y_all = await mpc.gather(mpc.transfer(y_local))
+    X_all_nested = await mpc.gather(mpc.transfer(X_local))
+    y_all_nested = await mpc.gather(mpc.transfer(y_local))
+
+    # Flatten
+    X_all = sum(X_all_nested, [])
+    y_all = sum(y_all_nested, [])
 
     # Run secure regression
     print("Processing the data...")
-    theta = await secure_linear_regression(X_all, y_all)
+    theta = await secure_linear_regression([X_all], [y_all])  # match expected arg shape
 
     # Output result
     print(f"[Party {mpc.pid}] Final theta (model weights): {theta}")
+
+    # Only visualize if you are party 0
+    if mpc.pid == 0:
+        print("Visualizing results (only on Party 0)...")
+        plot_actual_vs_predicted(X_all, y_all, theta)
+
     await mpc.shutdown()
 
 if __name__ == '__main__':
