@@ -3,13 +3,23 @@ from mpyc.runtime import mpc
 from data_loader import load_party_data
 from regression import secure_linear_regression
 
+def print_usage():
+    print("Usage: python secure_linreg.py [MPyC options] <dataset.csv>")
+    print("\nArguments:")
+    print("  [MPyC options]   : Optional, like -M (number of parties) or -I (party id)")
+    print("  <dataset.csv>    : Path to the local party's CSV file")
+    print("\nExample:")
+    print("  python secure_linreg.py -M3 -I0 party0_data.csv")
+    print("  python secure_linreg.py -M3 -I1 party1_data.csv")
+    print("  python secure_linreg.py -M3 -I2 party2_data.csv\n")
+    sys.exit(1)
+
 async def main():
-    if len(sys.argv) < 2:
-        print("Usage: python secure_linreg.py -Mx -Iy dataset.csv")
-        sys.exit(1)
+    if len(sys.argv) < 2 or sys.argv[-1].startswith("-"):
+        print_usage()
 
     # Load local party data
-    csv_file = sys.argv[1]
+    csv_file = sys.argv[-1]
     X_local, y_local = load_party_data(csv_file)
 
     # Start MPC runtime
@@ -20,6 +30,7 @@ async def main():
     y_all = await mpc.gather(mpc.transfer(y_local))
 
     # Run secure regression
+    print("Processing the data...")
     theta = await secure_linear_regression(X_all, y_all)
 
     # Output result
