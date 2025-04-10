@@ -13,10 +13,16 @@ def generate_csv(filename, n_samples, n_features, theta, noise_std):
 
     with open(filename, mode='w', newline='') as f:
         writer = csv.writer(f)
+
+        # Write header row: x0, x1, ..., xn, y
+        header = [f"x{i}" for i in range(n_features)] + ["y"]
+        writer.writerow(header)
+
         for _ in range(n_samples):
             features = [random.uniform(0, 10) for _ in range(n_features)]
             target = sum(w * x for w, x in zip(theta, features)) + random.gauss(0, noise_std)
             writer.writerow(features + [target])
+
     print(f"✅ Generated {filename} with {n_samples} samples, {n_features} features.")
 
 def get_next_session_folder(base_folder="data"):

@@ -5,6 +5,7 @@ def load_party_data(filename):
     X_local, y_local = [], []
     with open(filename, 'r') as f:
         reader = csv.reader(f)
+        next(reader)  # Skip header
         for row in reader:
             *features, label = map(float, row)
             features.append(1.0)  # add bias term
