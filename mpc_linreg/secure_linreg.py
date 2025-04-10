@@ -5,7 +5,7 @@ from regression import secure_linear_regression
 
 async def main():
     if len(sys.argv) < 2:
-        print("Usage: python linreg.py your_data.csv")
+        print("Usage: python secure_linreg.py -Mx -Iy dataset.csv")
         sys.exit(1)
 
     # Load local party data
