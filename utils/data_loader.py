@@ -50,7 +50,7 @@ def load_party_data_adapted(filename, party_id):
             else:
                 raise ValueError(f"Unsupported party ID: {party_id}")
 
-            features.append(1.0)  # Bias term
+            # features.append(1.0)  # Bias term
             X_local.append(features)
 
     return user_ids, X_local, y_local if y_local else None

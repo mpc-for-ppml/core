@@ -52,36 +52,66 @@ async def main():
     print(f"[Party {party_id}] 🔗 Found intersected user IDs in {elapsed_time:.2f}s: {intersection}")
     
     # Step 2: Join attributes for intersecting users only
-    filtered_X_local, filtered_y_local = [], []
+    print(f"\n[Party {party_id}] 🧩 Filtering data for intersected user IDs...")
 
-    # Step 3: Gather all X and y from parties
-    X_all_nested = await mpc.gather(mpc.transfer(filtered_X_local))
-    y_all_nested = await mpc.gather(mpc.transfer(filtered_y_local if y_local else []))
+    # Step 2.1: Create a mapping from user_id to index for filtering
+    id_to_index = {uid: idx for idx, uid in enumerate(user_ids)}
+    intersecting_indices = [id_to_index[uid] for uid in intersection if uid in id_to_index]
 
-    # Flatten
-    X_all = sum(X_all_nested, [])
-    y_all = sum(y_all_nested, [])
+    # Step 2.2: Filter local features and labels (if any)
+    X_filtered = [X_local[i] for i in intersecting_indices]
+    y_filtered = [y_local[i] for i in intersecting_indices] if y_local is not None else None
+
+    print(f"[Party {party_id}] 📦 Filtered {len(X_filtered)} records.")
+
+    # Step 2.3: Transfer X and y across all parties
+    X_joined = await mpc.transfer(X_filtered, senders=range(len(mpc.parties)))
+    y_final = await mpc.transfer(y_filtered, senders=[0]) if party_id == 0 else [None] * len(mpc.parties)
+
+    # Step 2.4: Flatten and consolidate feature vectors
+    X_all = []
+    y_all = []
+
+    for i in range(len(intersection)):
+        features = []
+        for party_features in X_joined:
+            features.extend(party_features[i])
+        X_all.append(features)
+        if party_id == 0:
+            y_all.append(y_final[0][i])  # Only Org A sends y
+
+    print(f"[Party {party_id}] ✅ Completed data join.")
+    
+    # [Bonus] Step 2.5: Pretty print the final joined data
+    if party_id == 0:
+        print("\n[Party 0] 🧾 Final joined dataset (features + label):")
+        print("Index | Age  | Income      | Purchase_Hist | Web_Visits | Purchase_Amount")
+        print("----------------------------------------------------------------------")
+        for idx, (features, label) in enumerate(zip(X_all, y_all)):
+            age, income, purchase_hist, web_visits = features
+            print(f"{idx:<5} | {age:<4} | {income:<11} | {purchase_hist:<13} | {web_visits:<11} | {label}")
+    else:
+        print(f"\n[Party {party_id}] 🧾 Final joined dataset (features only):")
+        print("Index | Age  | Income      | Purchase_Hist | Web_Visits")
+        print("--------------------------------------------------------")
+        for idx, features in enumerate(X_all):
+            age, income, purchase_hist, web_visits = features
+            print(f"{idx:<5} | {age:<4} | {income:<11} | {purchase_hist:<13} | {web_visits}")
 
     # At this point:
     # X_all = [ [age, income, purchase_history, web_visits], ... ] for intersecting users
     # y_all = [ purchase_amount, ... ] only from Org A
 
-    if not X_all or not y_all:
-        print(f"[Party {party_id}] ⚠️ No common data points after PSI. Exiting.")
-        await mpc.shutdown()
-        return
-
-    # Step 4: Run regression
-    print("Processing the data...")
+    # Step 3: Run regression
+    print(f"[Party {party_id}] ⚙️ Running linear regression to the data...")
     theta = await secure_linear_regression([X_all], [y_all])  # match expected arg shape
 
-    # Output result
-    print(f"[Party {mpc.pid}] Final theta (model weights): {theta}")
+    # Step 4: Output result
+    print(f"[Party {party_id}] ✅ Final theta (model weights): {theta}")
 
-    # Only visualize if you are party 0
-    if mpc.pid == 0:
-        print("Visualizing results (only on Party 0)...")
-        plot_actual_vs_predicted(X_all, y_all, theta)
+    # Step 5: Only visualize if you are party 0
+    print(f"\n[Party {party_id}] 📊 Visualizing results...")
+    plot_actual_vs_predicted(X_all, y_all, theta)
 
     await mpc.shutdown()
 
