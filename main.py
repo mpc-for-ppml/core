@@ -1,4 +1,5 @@
 import sys
+import time
 from mpyc.runtime import mpc
 from modules.mpc.linear import secure_linear_regression
 from modules.psi.multiparty_psi import run_n_party_psi
@@ -35,7 +36,21 @@ async def main():
         print(f"[Party {party_id}] ❗ Warning: Label provided but will be ignored")
 
     # TODO:
-    # Step 1: PSI - Determine shared user_ids across all parties
+    # Step 1: Private Set Intersection (PSI) - Find common user IDs across all parties
+    # Step 1.1: Collect user ID lists from all parties
+    gathered_user_ids = await mpc.transfer(user_ids, senders=range(len(mpc.parties)))
+    print(f"[Party {mpc.pid}] ✅ Received user ID lists from all parties.")
+
+    # Step 1.2: Create Party instances for each list of user IDs
+    parties = [Party(party_id, ids) for party_id, ids in enumerate(gathered_user_ids)]
+
+    # Step 1.3: Run PSI to find the shared user IDs
+    print(f"[Party {party_id}] 🔎 Computing intersection of user IDs...")
+    start_time = time.time()
+    intersection = run_n_party_psi(parties)
+    elapsed_time = time.time() - start_time
+    print(f"[Party {party_id}] 🔗 Found intersected user IDs in {elapsed_time:.2f}s: {intersection}")
+    
     # Step 2: Join attributes for intersecting users only
     filtered_X_local, filtered_y_local = [], []
 
