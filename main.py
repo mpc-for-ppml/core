@@ -5,14 +5,14 @@ from utils.data_loader import load_party_data
 from utils.visualization import plot_actual_vs_predicted
 
 def print_usage():
-    print("Usage: python secure_linreg.py [MPyC options] <dataset.csv>")
+    print("Usage: python main.py [MPyC options] <dataset.csv>")
     print("\nArguments:")
     print("  [MPyC options]   : Optional, like -M (number of parties) or -I (party id)")
     print("  <dataset.csv>    : Path to the local party's CSV file")
     print("\nExample:")
-    print("  python secure_linreg.py -M3 -I0 party0_data.csv")
-    print("  python secure_linreg.py -M3 -I1 party1_data.csv")
-    print("  python secure_linreg.py -M3 -I2 party2_data.csv\n")
+    print("  python main.py -M3 -I0 party0_data.csv")
+    print("  python main.py -M3 -I1 party1_data.csv")
+    print("  python main.py -M3 -I2 party2_data.csv\n")
     sys.exit(1)
 
 async def main():
