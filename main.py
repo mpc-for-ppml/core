@@ -1,7 +1,9 @@
 import sys
 from mpyc.runtime import mpc
 from modules.mpc.linear import secure_linear_regression
-from utils.data_loader import load_party_data
+from modules.psi.multiparty_psi import run_n_party_psi
+from modules.psi.party import Party
+from utils.data_loader import load_party_data_adapted
 from utils.visualization import plot_actual_vs_predicted
 
 def print_usage():
@@ -21,20 +23,40 @@ async def main():
 
     # Load local party data
     csv_file = sys.argv[-1]
-    X_local, y_local = load_party_data(csv_file)
+    party_id = mpc.pid
+    user_ids, X_local, y_local = load_party_data_adapted(csv_file, party_id)
 
     # Start MPC runtime
     await mpc.start()
 
-    # Broadcast data to all parties securely
-    X_all_nested = await mpc.gather(mpc.transfer(X_local))
-    y_all_nested = await mpc.gather(mpc.transfer(y_local))
+    if y_local is None and party_id == 0:
+        print(f"[Party {party_id}] ❗ Warning: Expected label missing for Org A")
+    elif y_local is not None and party_id != 0:
+        print(f"[Party {party_id}] ❗ Warning: Label provided but will be ignored")
+
+    # TODO:
+    # Step 1: PSI - Determine shared user_ids across all parties
+    # Step 2: Join attributes for intersecting users only
+    filtered_X_local, filtered_y_local = [], []
+
+    # Step 3: Gather all X and y from parties
+    X_all_nested = await mpc.gather(mpc.transfer(filtered_X_local))
+    y_all_nested = await mpc.gather(mpc.transfer(filtered_y_local if y_local else []))
 
     # Flatten
     X_all = sum(X_all_nested, [])
     y_all = sum(y_all_nested, [])
 
-    # Run secure regression
+    # At this point:
+    # X_all = [ [age, income, purchase_history, web_visits], ... ] for intersecting users
+    # y_all = [ purchase_amount, ... ] only from Org A
+
+    if not X_all or not y_all:
+        print(f"[Party {party_id}] ⚠️ No common data points after PSI. Exiting.")
+        await mpc.shutdown()
+        return
+
+    # Step 4: Run regression
     print("Processing the data...")
     theta = await secure_linear_regression([X_all], [y_all])  # match expected arg shape
 
