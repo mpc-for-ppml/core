@@ -1,6 +1,6 @@
 import sys
 from mpyc.runtime import mpc
-from modules.linear import secure_linear_regression
+from modules.mpc.linear import secure_linear_regression
 from utils.data_loader import load_party_data
 from utils.visualization import plot_actual_vs_predicted
 
