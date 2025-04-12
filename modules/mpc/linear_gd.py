@@ -1,5 +1,6 @@
+# modules/mpc/linear_gd.py
+
 from mpyc.runtime import mpc
-import mpyc.sectypes as stypes
 
 async def secure_linear_regression(X_parts, y_parts, epochs=200, lr=0.2):
     """Secure multilinear regression using gradient descent in MPyC.
