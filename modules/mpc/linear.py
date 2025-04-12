@@ -3,12 +3,18 @@ from mpyc.runtime import mpc
 
 secfxp = mpc.SecFxp()
 
-async def secure_linear_regression(X_parties, y_parties):
-    """Performs secure linear regression using MPC."""
+async def secure_linear_regression(X_parties, y_parties, epochs=1000, alpha=0.05):
+    """Performs secure linear regression using gradient descent and MPC."""
     # Step 0: Flatten inputs from all parties
     X = sum(X_parties, [])
     y = sum(y_parties, [])
+    
+    # Check for data size mismatch
+    m, n = len(X), len(X[0])
+    assert len(X) == len(y), f"Mismatch: X has {m} samples, but y has {len(y)} labels"
 
+    print(f"[Party {mpc.pid}] ✅ Loaded {m} samples, {n} features")
+    
     # Step 1: Convert to secret-shared values (local data)
     X_sec = [[secfxp(xij) for xij in xi] for xi in X]
     y_sec = [secfxp(yi) for yi in y]

@@ -35,15 +35,15 @@ async def main():
     y_all = sum(y_all_nested, [])
 
     # Run secure regression
-    print("Processing the data...")
+    print(f"[Party {mpc.pid}] ⚙️ Running linear regression to the data...")
     theta = await secure_linear_regression([X_all], [y_all])  # match expected arg shape
 
     # Output result
-    print(f"[Party {mpc.pid}] Final theta (model weights): {theta}")
+    print(f"\n[Party {mpc.pid}] ✅ Final theta (model weights): {theta}")
 
     # Only visualize if you are party 0
     if mpc.pid == 0:
-        print("Visualizing results (only on Party 0)...")
+        print(f"\n[Party {mpc.pid}] 📊 Visualizing results (Only on Party 0)...")
         plot_actual_vs_predicted(X_all, y_all, theta)
 
     await mpc.shutdown()

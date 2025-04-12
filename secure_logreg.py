@@ -34,7 +34,7 @@ async def main():
     y_all = sum(y_all_nested, [])
 
     # Run secure regression
-    print(f"[Party {mpc.pid}] ⚙️ Running linear regression to the data...")
+    print(f"[Party {mpc.pid}] ⚙️ Running logistic regression to the data...")
     theta = await secure_logistic_regression([X_all], [y_all])
 
     # Output result
