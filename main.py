@@ -1,31 +1,33 @@
 import sys
 import time
 from mpyc.runtime import mpc
-from modules.mpc.linear import secure_linear_regression
+from modules.mpc.linear_gd import secure_linear_regression
 from modules.psi.multiparty_psi import run_n_party_psi
 from modules.psi.party import Party
+from utils.cli_parser import parse_cli_args
 from utils.data_loader import load_party_data_adapted
+from utils.data_normalizer import normalize_features
 from utils.visualization import plot_actual_vs_predicted
 
-def print_usage():
-    print("Usage: python main.py [MPyC options] <dataset.csv>")
-    print("\nArguments:")
-    print("  [MPyC options]   : Optional, like -M (number of parties) or -I (party id)")
-    print("  <dataset.csv>    : Path to the local party's CSV file")
-    print("\nExample:")
-    print("  python main.py -M3 -I0 party0_data.csv")
-    print("  python main.py -M3 -I1 party1_data.csv")
-    print("  python main.py -M3 -I2 party2_data.csv\n")
-    sys.exit(1)
+async def main():    
+    args = parse_cli_args()
+    csv_file = args["csv_file"]
+    normalizer_type = args["normalizer_type"]
+    regression_type = args["regression_type"]
 
-async def main():
-    if len(sys.argv) < 2 or sys.argv[-1].startswith("-"):
-        print_usage()
-
-    # Load local party data
-    csv_file = sys.argv[-1]
     party_id = mpc.pid
     user_ids, X_local, y_local, feature_names, label_name = load_party_data_adapted(csv_file)
+
+    # Normalize features
+    if normalizer_type:
+        try:
+            X_local = normalize_features(X_local, method=normalizer_type)
+            print(f"[Normalizer] 🧪 Applied '{normalizer_type}' normalization.")
+        except ValueError as e:
+            print(f"[Normalizer] ❌ Normalization error: {e}")
+            sys.exit(1)
+    else:
+        print(f"[Normalizer] ⚠️ No normalization applied.")
 
     # Start MPC runtime
     await mpc.start()
