@@ -2,6 +2,7 @@ import sys
 import time
 from mpyc.runtime import mpc
 from modules.mpc.linear_gd import secure_linear_regression
+from modules.mpc.logistic import secure_logistic_regression
 from modules.psi.multiparty_psi import run_n_party_psi
 from modules.psi.party import Party
 from utils.cli_parser import parse_cli_args
@@ -140,8 +141,11 @@ async def main():
     X_all = [row + [1.0] for row in X_all]
     
     # Step 3.2: Run the regression
-    print(f"\n[Party {party_id}] ⚙️ Running linear regression to the data...")
-    theta = await secure_linear_regression([X_all], [y_all])  # match expected arg shape
+    print(f"\n[Party {party_id}] ⚙️ Running {regression_type} regression on the data...")
+    if regression_type == 'linear':
+        theta = await secure_linear_regression([X_all], [y_all])
+    elif regression_type == 'logistic':
+        theta = await secure_logistic_regression([X_all], [y_all])
 
     # Step 4: Output result
     print(f"[Party {party_id}] ✅ Final theta (model weights): {theta}")
