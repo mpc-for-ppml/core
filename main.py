@@ -81,8 +81,8 @@ async def main():
     print(f"[Party {party_id}] ✅ Completed data join.")
     
     # [Bonus] Step 2.5: Pretty print the final joined data
-    print("\n[Party {party_id}] 🧾 Final joined dataset (features + label):")
-    print("Index | Age  | Income      | Purchase_Hist | Web_Visits | Purchase_Amount")
+    print(f"\n[Party {party_id}] 🧾 Final joined dataset (features + label):")
+    print("Index | Age  | Income      | Purchase_Hist | Web_Visits  | Purchase_Amount")
     print("----------------------------------------------------------------------")
     for idx, (features, label) in enumerate(zip(X_all, y_all)):
         age, income, purchase_hist, web_visits = features
