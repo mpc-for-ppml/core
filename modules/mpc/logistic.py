@@ -1,60 +1,64 @@
+# modules/mpc/logistic.py
+
 from mpyc.runtime import mpc
 
-secfxp = mpc.SecFxp()
+async def secure_logistic_regression(X_parts, y_parts, epochs=200, lr=0.2):
+    """Secure logistic regression using gradient descent in MPyC.
 
-async def sigmoid(x):
-    """Polynomial approximation of the sigmoid function."""
-    const_05 = secfxp(0.5)
-    const_0197 = secfxp(0.197)
-    const_0004 = secfxp(0.004)
+    Args:
+        X_parts (List[List[List[secfx]]]): List of X matrices from parties (all combined).
+        y_parts (List[List[secfx]]): List of y vectors from parties (all combined).
+        epochs (int): Number of gradient descent iterations.
+        lr (float): Learning rate.
 
-    x2 = x * x
-    x3 = x2 * x
-    return const_05 + const_0197 * x - const_0004 * x3
+    Returns:
+        List[float]: Final model weights (theta), revealed to all parties.
+    """
+    secfx = mpc.SecFxp()
 
-async def secure_logistic_regression(X_parties, y_parties, num_iters=20, lr=0.05):
-    """Secure logistic regression using secret-shared gradient descent."""
-    # Step 0: Flatten inputs from all parties
-    X = sum(X_parties, [])
-    y = sum(y_parties, [])
+    # Concatenate data
+    X = X_parts[0]
+    y = y_parts[0]
+    n_samples = len(y)
+    n_features = len(X[0])
 
-    # Step 1: Check for data size mismatch
-    m, n = len(X), len(X[0])
-    assert len(X) == len(y), f"Mismatch: X has {m} samples, but y has {len(y)} labels"
+    print(X[0], X[-1])
+    print(y[0], y[-1])
+    print(f"[Party {mpc.pid}] ✅ Loaded {n_samples} samples, {n_features} features")
 
-    print(f"[Party {mpc.pid}] ✅ Loaded {m} samples, {n} features")
+    # Initialize model weights
+    theta = [secfx(0) for _ in range(n_features)]
 
-    # Step 2: Convert to secret-shared values (local data)
-    X_sec = [[secfxp(xij) for xij in xi] for xi in X]
-    y_sec = [secfxp(yi) for yi in y]
-    theta = [secfxp(0) for _ in range(n)]
+    print(f"\n[Party {mpc.pid}] 🔎 Start logistic regression with {epochs} iterations and learning rate {lr}")
 
-    # Step 3: Learning
-    print(f"\n[Party {mpc.pid}] 🔎 Start learning with {num_iters} iterations and learning rate {lr}")
-    for iteration in range(num_iters):
-        # Compute X * theta
-        preds = []
-        for xi in X_sec:
-            dot = sum(xij * tj for xij, tj in zip(xi, theta))
-            sig = await sigmoid(dot)
-            preds.append(sig)
+    def sigmoid(x):
+        # 5th-order Taylor approx: sigmoid(x) ≈ 0.5 + 0.25x - x³/48 + x⁵/480
+        const_05 = secfx(0.5)
+        const_025 = secfx(0.25)
+        x3 = x * x * x
+        x5 = x3 * x * x
+        return const_05 + const_025 * x - (x3 / 48) + (x5 / 480)
 
-        # Compute gradient: grad = (1/m) * X^T * (preds - y)
-        errors = [pi - yi for pi, yi in zip(preds, y_sec)]
-        grad = []
-        
-        for j in range(n):
-            col_j = [xij[j] for xij in X_sec]
-            g_j = sum(xj * err for xj, err in zip(col_j, errors)) / m
-            grad.append(g_j)
+    for epoch in range(epochs):
+        # Compute predictions: sigmoid(X @ theta)
+        y_pred = [sigmoid(sum(x_i[j] * theta[j] for j in range(n_features))) for x_i in X]
 
-        # Update theta
-        theta = [t - lr * g for t, g in zip(theta, grad)]
+        # Compute error: y_pred - y
+        error = [y_pred[i] - y[i] for i in range(n_samples)]
+
+        # Compute gradients
+        gradients = []
+        for j in range(n_features):
+            grad_j = sum(error[i] * X[i][j] for i in range(n_samples)) / n_samples
+            gradients.append(grad_j)
+
+        # Update weights
+        theta = [theta[j] - secfx(lr) * gradients[j] for j in range(n_features)]
 
         # Iteration logging
-        print(f"[Party {mpc.pid}] 🔄 Iteration {iteration}")
+        print(f"[Party {mpc.pid}] 🔄 Iteration {epoch}")
 
-    # Step 4: Reveal final model
+    # Reveal model weights to all parties
     print(f"[Party {mpc.pid}] ⌛ Reaching final output...")
     try:
         theta_open = await mpc.output(theta)
