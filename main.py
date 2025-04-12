@@ -25,7 +25,7 @@ async def main():
     # Load local party data
     csv_file = sys.argv[-1]
     party_id = mpc.pid
-    user_ids, X_local, y_local = load_party_data_adapted(csv_file, party_id)
+    user_ids, X_local, y_local, feature_names, label_name = load_party_data_adapted(csv_file)
 
     # Start MPC runtime
     await mpc.start()
@@ -34,6 +34,18 @@ async def main():
         print(f"[Party {party_id}] ❗ Warning: Expected label missing for Org A")
     elif y_local is not None and party_id != 0:
         print(f"[Party {party_id}] ❗ Warning: Label provided but will be ignored")
+        
+    # Send your local feature names to all other parties
+    feature_names_all = await mpc.transfer(feature_names, senders=range(len(mpc.parties)))
+    
+    # Broadcast label name (only Party 0 has it)
+    label_name_all = await mpc.transfer(label_name, senders=[0])
+    label_name = label_name_all[0] if label_name_all else "Label"
+
+    # Flatten in party order: assume feature_names_all[i] is from party i
+    joined_feature_names = []
+    for f_list in feature_names_all:
+        joined_feature_names.extend(f_list)
 
     # Step 1: Private Set Intersection (PSI) - Find common user IDs across all parties
     # Step 1.1: Collect user ID lists from all parties
@@ -80,13 +92,42 @@ async def main():
 
     print(f"[Party {party_id}] ✅ Completed data join.")
     
-    # [Bonus] Step 2.5: Pretty print the final joined data
+    # [Bonus] Step 2.5: Pretty print the final joined data    
     print(f"\n[Party {party_id}] 🧾 Final joined dataset (features + label):")
-    print("Index | Age  | Income      | Purchase_Hist | Web_Visits  | Purchase_Amount")
-    print("----------------------------------------------------------------------")
-    for idx, (features, label) in enumerate(zip(X_all, y_all)):
-        age, income, purchase_hist, web_visits = features
-        print(f"{idx:<5} | {age:<4} | {income:<11} | {purchase_hist:<13} | {web_visits:<11} | {label}")
+
+    # Combine features and label to determine column widths
+    all_rows = []
+    for features, label in zip(X_all, y_all):
+        row = list(map(str, features)) + [str(round(label, 2))]
+        all_rows.append(row)
+
+    # Get all column names (features + Label)
+    label_name = label_name or "Label"  # fallback if somehow None
+    all_headers = joined_feature_names + [label_name]
+
+    # Calculate max width for each column
+    col_widths = []
+    for col_idx in range(len(all_headers)):
+        max_data_len = max(len(row[col_idx]) for row in all_rows)
+        header_len = len(all_headers[col_idx])
+        col_widths.append(max(max_data_len, header_len) + 2)
+
+    # Create header line
+    header = "idx".ljust(5) + "| " + " | ".join(
+        [all_headers[i].ljust(col_widths[i]) for i in range(len(all_headers))]
+    )
+    separator = "-" * len(header)
+
+    # Print header
+    print(header)
+    print(separator)
+
+    # Print data rows
+    for idx, row in enumerate(all_rows):
+        row_str = " | ".join(
+            [row[i].ljust(col_widths[i]) for i in range(len(row))]
+        )
+        print(str(idx).ljust(5) + "| " + row_str)
 
     # At this point:
     # X_all = [ [age, income, purchase_history, web_visits], ... ] for intersecting users

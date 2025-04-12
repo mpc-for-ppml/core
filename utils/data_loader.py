@@ -13,44 +13,38 @@ def load_party_data(filename):
             y_local.append(label)
     return X_local, y_local
 
-def load_party_data_adapted(filename, party_id):
+def load_party_data_adapted(filename):
     """
-    Load a party's data from a CSV file and extract user_ids, features (X), and optional labels (y).
-    Adds a bias term to X.
-    
-    Assumptions:
-    - Org A (party_id == 0) has: user_id, age, income, purchase_amount (label)
-    - Org B (party_id == 1) has: user_id, purchase_history (no label)
-    - Org C (party_id == 2) has: user_id, web_visits (no label)
+    Dynamically loads CSV data for a party and returns:
+    - user_ids: list of user_id values
+    - X_local: list of feature vectors
+    - y_local: list of labels (if available, else None)
+    - feature_names: names of features (excluding user_id and label)
+    - label_name: the name of the label column (if available, else None)
     """
     user_ids = []
     X_local = []
     y_local = []
+    feature_names = []
+    label_name = None
 
     with open(filename, 'r') as f:
         reader = csv.reader(f)
-        next(reader)  # Skip header
+        header = next(reader)
+
+        user_id_idx = header.index("user_id")
+        label_idx = header.index("purchase_amount") if "purchase_amount" in header else None
+        if label_idx is not None:
+            label_name = header[label_idx]
+
+        feature_idxs = [i for i in range(len(header)) if i != user_id_idx and i != label_idx]
+        feature_names = [header[i] for i in feature_idxs]
 
         for row in reader:
-            user_id = row[0]
-            user_ids.append(user_id)
+            user_ids.append(row[user_id_idx])
+            X_local.append([float(row[i]) for i in feature_idxs])
+            if label_idx is not None:
+                y_local.append(float(row[label_idx]))
 
-            if party_id == 0:
-                age = float(row[1])
-                income = float(row[2])
-                label = float(row[3])
-                features = [age, income]
-                y_local.append(label)
-            elif party_id == 1:
-                purchase_history = float(row[1])
-                features = [purchase_history]
-            elif party_id == 2:
-                web_visits = float(row[1])
-                features = [web_visits]
-            else:
-                raise ValueError(f"Unsupported party ID: {party_id}")
+    return user_ids, X_local, y_local if y_local else None, feature_names, label_name
 
-            # features.append(1.0)  # Bias term
-            X_local.append(features)
-
-    return user_ids, X_local, y_local if y_local else None
