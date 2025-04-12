@@ -3,7 +3,7 @@ from mpyc.runtime import mpc
 
 secfxp = mpc.SecFxp()
 
-async def secure_linear_regression(X_parties, y_parties, epochs=1000, alpha=0.05):
+async def secure_linear_regression(X_parties, y_parties):
     """Performs secure linear regression using gradient descent and MPC."""
     # Step 0: Flatten inputs from all parties
     X = sum(X_parties, [])
