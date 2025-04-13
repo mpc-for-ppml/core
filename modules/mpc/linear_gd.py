@@ -4,9 +4,9 @@ from mpyc.runtime import mpc
 
 # Default values — same as your function signature
 DEFAULT_EPOCHS = 200
-DEFAULT_LR = 0.2
+DEFAULT_LR = 0.01
 
-async def secure_linear_regression(X_parts, y_parts, epochs=200, lr=0.2):
+async def secure_linear_regression(X_parts, y_parts, epochs=DEFAULT_EPOCHS, lr=DEFAULT_LR):
     """Secure multilinear regression using gradient descent in MPyC.
 
     Args:
@@ -30,6 +30,7 @@ async def secure_linear_regression(X_parts, y_parts, epochs=200, lr=0.2):
 
     # Initialize theta (model weights) to zeros
     theta = [secfx(0) for _ in range(n_features)]
+    lr_sec = secfx(lr)
 
     print(f"\n[Party {mpc.pid}] 🔎 Start learning with {epochs} iterations and learning rate {lr}")
     for epoch in range(epochs):
@@ -46,7 +47,7 @@ async def secure_linear_regression(X_parts, y_parts, epochs=200, lr=0.2):
             gradients.append(grad_j)
 
         # Update theta
-        theta = [theta[j] - secfx(lr) * gradients[j] for j in range(n_features)]
+        theta = [theta[j] - lr_sec * gradients[j] for j in range(n_features)]
         
         # Debug: Print theta every 10 iterations
         if epoch % 10 == 0 or epoch == epochs - 1:
