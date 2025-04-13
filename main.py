@@ -1,7 +1,7 @@
 import sys
 import time
 from mpyc.runtime import mpc
-from modules.mpc.linear_gd import secure_linear_regression
+from modules.mpc.linear_gd import secure_linear_regression, DEFAULT_EPOCHS, DEFAULT_LR
 from modules.mpc.logistic import secure_logistic_regression
 from modules.psi.multiparty_psi import run_n_party_psi
 from modules.psi.party import Party
@@ -140,12 +140,37 @@ async def main():
     # Step 3.1: Add bias coeff to X
     X_all = [row + [1.0] for row in X_all]
     
+    # Step 3.2: Get the learning variables (epochs and lr)
+    if mpc.pid == 0:
+        try:
+            epochs_input = input(f"\n[Party 0] ❓ Enter number of epochs (default={DEFAULT_EPOCHS}): \n >>  ").strip()
+            lr_input = input(f"[Party 0] ❓ Enter learning rate (default={DEFAULT_LR}): \n >>  ").strip()
+
+            epochs = int(epochs_input) if epochs_input else DEFAULT_EPOCHS
+            lr = float(lr_input) if lr_input else DEFAULT_LR
+
+            print(f"[Party 0] ✅ Using {epochs} epochs and {lr} learning rate.")
+        except ValueError:
+            print("[Party 0] ❌ Invalid input. Please enter numeric values.")
+            sys.exit(1)
+    else:
+        epochs = None
+        lr = None
+        
+    # Send from Party 0 to all parties
+    epochs_all = await mpc.transfer(epochs, senders=[0])
+    lr_all = await mpc.transfer(lr, senders=[0])
+
+    # All parties now use the same values
+    epochs = epochs_all[0]
+    lr = lr_all[0]
+    
     # Step 3.2: Run the regression
-    print(f"\n[Party {party_id}] ⚙️ Running {regression_type} regression on the data...")
+    print(f"\n[Party {party_id}] ⚙️ Running {regression_type} regression on the data...")    
     if regression_type == 'linear':
-        theta = await secure_linear_regression([X_all], [y_all])
+        theta = await secure_linear_regression([X_all], [y_all], epochs=epochs, lr=lr)
     elif regression_type == 'logistic':
-        theta = await secure_logistic_regression([X_all], [y_all])
+        theta = await secure_logistic_regression([X_all], [y_all], epochs=epochs, lr=lr)
 
     # Step 4: Output result
     print(f"[Party {party_id}] ✅ Final theta (model weights): {theta}")

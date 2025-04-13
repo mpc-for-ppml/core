@@ -2,6 +2,10 @@
 
 from mpyc.runtime import mpc
 
+# Default values — same as your function signature
+DEFAULT_EPOCHS = 200
+DEFAULT_LR = 0.2
+
 async def secure_linear_regression(X_parts, y_parts, epochs=200, lr=0.2):
     """Secure multilinear regression using gradient descent in MPyC.
 
@@ -21,9 +25,6 @@ async def secure_linear_regression(X_parts, y_parts, epochs=200, lr=0.2):
     y = y_parts[0]  # shape: (n_samples,)
     n_samples = len(y)
     n_features = len(X[0])
-    
-    print(X[0], X[-1])
-    print(y[0], y[-1])
     
     print(f"[Party {mpc.pid}] ✅ Loaded {n_samples} samples, {n_features} features")
 
