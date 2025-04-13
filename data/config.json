@@ -2,25 +2,24 @@
     "parties": [
         {
             "name": "party1",
-            "samples": 50,
+            "samples": 10,
             "features": 5,
-            "theta": [1.5, -2.0, -3.0, -6.7, 2.5],
-            "noise": 1.0
+            "theta": [1.2, -1.8, 0.5, 2.3, -0.9],
+            "noise": 0.5
         },
         {
             "name": "party2",
-            "samples": 60,
+            "samples": 10,
             "features": 5,
-            "theta": [-3.5, 3.0, 3.0, 16.7, 3.5],
-            "noise": 1.5
+            "theta": [-1.0, 2.5, -2.0, 1.8, 0.4],
+            "noise": 0.8
         },
         {
             "name": "party3",
-            "samples": 200,
+            "samples": 10,
             "features": 5,
-            "theta": [4.5, -9.0, 0.0, 3.7, -6.0],
-            "noise": 0.7
+            "theta": [0.6, -0.3, 1.5, -2.2, 1.1],
+            "noise": 1.0
         }
     ]
 }
-  
