@@ -1,9 +1,10 @@
 import sys
 from mpyc.runtime import mpc
-from modules.mpc.logistic import secure_logistic_regression, DEFAULT_EPOCHS, DEFAULT_LR
+from modules.mpc.logistic import secure_logistic_regression, approx_sigmoid, DEFAULT_EPOCHS, DEFAULT_LR
 from utils.cli_parser import parse_cli_args
 from utils.data_loader import load_party_data
 from utils.data_normalizer import normalize_features
+from sklearn.metrics import classification_report
 
 async def main():
     args = parse_cli_args(type="secure_logreg")
@@ -60,11 +61,31 @@ async def main():
     lr = lr_all[0]
 
     # Run secure regression
-    print(f"[Party {mpc.pid}] ⚙️ Running logistic regression to the data...")
+    print(f"\n[Party {mpc.pid}] ⚙️ Running logistic regression to the data...")
     theta = await secure_logistic_regression([X_all], [y_all], epochs=epochs, lr=lr)
 
     # Output result
     print(f"\n[Party {mpc.pid}] ✅ Final theta (model weights): {theta}")
+    
+    # Predict: Compute sigmoid(dot(x, theta)) for each sample
+    sigmoid_outputs = []
+    for x in X_all:
+        # Dot product manually: sum(x_i * theta_i)
+        dot = sum([a * b for a, b in zip(x, theta)])
+        sigmoid = approx_sigmoid(dot)
+        sigmoid_outputs.append(await mpc.output(sigmoid))
+
+    # Binarize predictions
+    binary_preds = [1 if p >= 0.5 else 0 for p in sigmoid_outputs]
+    y_true = y_all
+    y_pred = binary_preds
+
+    # Generate the classification report
+    report = classification_report(y_true, y_pred, zero_division=0)
+
+    # Print the classification report
+    print(f"\n[Party {mpc.pid}] 📊 Showing the evaluation report...")
+    print(report)
 
     await mpc.shutdown()
 
