@@ -48,8 +48,10 @@ async def secure_linear_regression(X_parts, y_parts, epochs=200, lr=0.2):
         # Update theta
         theta = [theta[j] - secfx(lr) * gradients[j] for j in range(n_features)]
         
-        # Iteration logging
-        print(f"[Party {mpc.pid}] 🔄 Iteration {epoch}")
+        # Debug: Print theta every 10 iterations
+        if epoch % 10 == 0 or epoch == epochs - 1:
+            theta_debug = await mpc.output(theta)
+            print(f"[Party {mpc.pid}] 🧮 Epoch {epoch + 1}: theta = {[float(t) for t in theta_debug]}")
 
     # Reveal model weights to all parties
     print(f"[Party {mpc.pid}] ⌛ Reaching final output...")
