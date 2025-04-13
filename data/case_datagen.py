@@ -7,8 +7,8 @@ import argparse
 
 # Config for generation
 CONFIG = {
-    "total_users": 100,
-    "min_shared_users": 5,
+    "total_users": 500,
+    "min_shared_users": 20,
     "orgs": {
         "A": ["user_id", "age", "income", "purchase_amount"],
         "B": ["user_id", "purchase_history"],
