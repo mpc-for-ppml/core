@@ -11,7 +11,7 @@ from utils.data_normalizer import normalize_features
 from utils.visualization import plot_actual_vs_predicted
 
 async def main():    
-    args = parse_cli_args()
+    args = parse_cli_args(type="main")
     csv_file = args["csv_file"]
     normalizer_type = args["normalizer_type"]
     regression_type = args["regression_type"]

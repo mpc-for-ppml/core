@@ -1,25 +1,38 @@
 import sys
 
-def print_usage_and_exit():
-    print("Usage: python main.py [MPyC options] <dataset.csv> [--regression-type|--r] [linear|logistic] [--normalizer|--n] [minmax|zscore] [--help|-h]")
+import sys
+
+def print_usage_and_exit(script_type):
+    is_main = script_type == "main"
+    print(f"Usage: python {script_type}.py [MPyC options] <dataset.csv>", end=" ")
+    if is_main:
+        print("[--regression-type|--r] [linear|logistic]", end=" ")
+    print("[--normalizer|--n] [minmax|zscore] [--help|-h]")
+
     print("\nArguments:")
     print("  [MPyC options]     : Optional, like -M (number of parties) or -I (party id)")
     print("  <dataset.csv>      : Path to the local party's CSV file")
     print("  --normalizer -n    : Choose normalization method: 'minmax' or 'zscore', default to none")
-    print("  --regression -r    : Choose regression method: 'linear' or 'logistic', default to 'linear'")
+    if is_main:
+        print("  --regression -r    : Choose regression method: 'linear' or 'logistic', default to 'linear'")
     print("  --help -h          : Show this help message and exit")
+
     print("\nExample:")
-    print("  python main.py -M3 -I0 party0_data.csv -n zscore -r logistic")
-    print("  python main.py -M3 -I1 party1_data.csv -n zscore -r logistic")
-    print("  python main.py -M3 -I2 party2_data.csv -n zscore -r logistic\n")
+    for i in range(3):
+        example = f"  python {script_type}.py -M3 -I{i} party{i}_data.csv -n zscore"
+        if is_main:
+            example += " -r logistic"
+        print(example)
+    
+    print()
     sys.exit(1)
 
-def parse_cli_args():
+def parse_cli_args(type):
     if '--help' in sys.argv or '-h' in sys.argv:
-        print_usage_and_exit()
+        print_usage_and_exit(type)
 
     if len(sys.argv) < 2:
-        print_usage_and_exit()
+        print_usage_and_exit(type)
 
     csv_file = None
     normalizer_type = None

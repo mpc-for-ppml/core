@@ -2,7 +2,11 @@
 
 from mpyc.runtime import mpc
 
-async def secure_logistic_regression(X_parts, y_parts, epochs=200, lr=0.01):
+# Default values — same as your function signature
+DEFAULT_EPOCHS = 200
+DEFAULT_LR = 0.01
+
+async def secure_logistic_regression(X_parts, y_parts, epochs=DEFAULT_EPOCHS, lr=DEFAULT_LR):
     """Secure logistic regression using gradient descent in MPyC.
 
     Args:
