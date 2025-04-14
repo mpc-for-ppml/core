@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error, r2_score, classification_report, roc_curve, roc_auc_score
 import math
 
-def plot_actual_vs_predicted(X, y, theta):
+def plot_actual_vs_predicted(y_true, y_pred):
     """
     Plot actual vs predicted target values and show RMSE & R² Score.
 
@@ -13,31 +13,6 @@ def plot_actual_vs_predicted(X, y, theta):
         y: True target values (list).
         theta: Trained weights (bias is last element).
     """
-    # Handle nested secret-shared lists by flattening
-    def flatten_row(row):
-        while isinstance(row, list):
-            if len(row) == 0:
-                return 0.0  # or raise an error
-            row = row[0]
-        return row
-
-    # Extract weights and bias
-    weights = [float(w) for w in theta[:-1]]
-    bias = float(theta[-1])
-
-    # Remove bias term from feature vectors, flatten if needed
-    X_no_bias = [
-        [float(flatten_row(val)) for val in row[:-1]]
-        for row in X
-    ]
-
-    y_true = [float(flatten_row(val)) for val in y]
-
-    # Compute predicted values (dot product + bias)
-    y_pred = [
-        sum(w * x for w, x in zip(weights, row)) + bias
-        for row in X_no_bias
-    ]
 
     # Calculate metrics
     mse = mean_squared_error(y_true, y_pred)

@@ -1,45 +1,88 @@
 # modules/mpc/linear.py
 
-import numpy as np
 from mpyc.runtime import mpc
 
-secfxp = mpc.SecFxp()
+# Default values — same as your function signature
+DEFAULT_EPOCHS = 200
+DEFAULT_LR = 0.01
 
-async def secure_linear_regression(X_parties, y_parties):
-    """Performs secure linear regression using MPC."""
-    # Step 0: Flatten inputs from all parties
-    X = sum(X_parties, [])
-    y = sum(y_parties, [])
-    
-    # Check for data size mismatch
-    m, n = len(X), len(X[0])
-    assert len(X) == len(y), f"Mismatch: X has {m} samples, but y has {len(y)} labels"
+class SecureLinearRegression:
+    def __init__(self, epochs=DEFAULT_EPOCHS, lr=DEFAULT_LR):
+        self.epochs = epochs
+        self.lr = lr
+        self.theta = None  # Model parameters
+        self.secfx = mpc.SecFxp()
 
-    print(f"[Party {mpc.pid}] ✅ Loaded {m} samples, {n} features")
-    
-    # Step 1: Convert to secret-shared values (local data)
-    X_sec = [[secfxp(xij) for xij in xi] for xi in X]
-    y_sec = [secfxp(yi) for yi in y]
-    
-    # Step 2: Compute XtX = X^T * X and Xty = X^T * y securely
-    Xt = list(zip(*X_sec))
-    XtX = [[sum(xi * xj for xi, xj in zip(row_i, row_j)) for row_j in Xt] for row_i in Xt]
-    Xty = [sum(xi * yi for xi, yi in zip(row, y_sec)) for row in Xt]
+    async def fit(self, X_parts, y_parts):
+        """Securely train linear regression using gradient descent.
 
-    # Step 3: Open XtX and Xty result to all parties
-    XtX_flat = [elem for row in XtX for elem in row]
-    XtX_open_flat = await mpc.output(XtX_flat)
-    n = len(XtX)
-    XtX_open = [XtX_open_flat[i * n:(i + 1) * n] for i in range(n)]
+        Args:
+            X_parts (List[List[List[secfx]]]): List of X matrices from parties (all combined).
+            y_parts (List[List[secfx]]): List of y vectors from parties (all combined).
+        """
+        
+        # Concatenate data from all parties (already flattened)
+        X = X_parts[0]  # shape: (n_samples, n_features)
+        y = y_parts[0]  # shape: (n_samples,)
+        n_samples = len(y)
+        n_features = len(X[0])
 
-    Xty_open = await mpc.output(Xty)
+        print(f"[Party {mpc.pid}] ✅ Loaded {n_samples} samples, {n_features} features")
+        
+        # Initialize theta (model weights) to zeros
+        theta = [self.secfx(0) for _ in range(n_features)]
+        lr_sec = self.secfx(self.lr)
 
-    # Step 4: Solve for theta (plain domain here, for simplicity)
-    XtX_np = np.array([[float(x) for x in row] for row in XtX_open])
-    Xty_np = np.array([float(v) for v in Xty_open])
-    lambda_reg = 1e-4
-    XtX_np += lambda_reg * np.identity(XtX_np.shape[0])
+        print(f"\n[Party {mpc.pid}] 🔎 Start learning with {self.epochs} iterations and learning rate {self.lr}")
+        for epoch in range(self.epochs):
+            # Compute predictions: y_pred = X @ theta
+            y_pred = [sum(x_i[j] * theta[j] for j in range(n_features)) for x_i in X]
+            
+            # Compute error = y_pred - y
+            error = [y_pred[i] - y[i] for i in range(n_samples)]
 
-    # Solve theta using numpy (insecure, but after open)
-    theta = np.linalg.solve(XtX_np, Xty_np)
-    return theta
+            # Compute gradients
+            gradients = []
+            for j in range(n_features):
+                grad_j = sum(error[i] * X[i][j] for i in range(n_samples)) / n_samples
+                gradients.append(grad_j)
+
+            # Update theta
+            theta = [theta[j] - lr_sec * gradients[j] for j in range(n_features)]
+            
+            # Logging: Print theta every 10 iterations
+            if epoch % 10 == 0 or epoch == self.epochs - 1:
+                theta_debug = await mpc.output(theta)
+                print(f"[Party {mpc.pid}] 🧮 Epoch {epoch + 1}: theta = {[float(t) for t in theta_debug]}")
+
+        # Reveal model weights to all parties
+        print(f"\n[Party {mpc.pid}] ⌛ Reaching final training epoch...")
+        try:
+            theta_open = await mpc.output(theta)
+            self.theta = [float(t) for t in theta_open]
+            print(f"[Party {mpc.pid}] ✅ Training complete. Model weights: {self.theta}")
+        except Exception as e:
+            print(f"[Party {mpc.pid}] ❗ ERROR during mpc.output: {e}")
+            self.theta = []
+
+    async def predict(self, X_input):
+        """Securely predict using the trained model.
+
+        Args:
+            X_input (List[List[secfx]]): New input data (securely shared, same format).
+
+        Returns:
+            List[float]: Predicted values.
+        """
+        if self.theta is None:
+            raise ValueError("Model not trained. Call fit() before predict().")
+
+        theta_sec = [self.secfx(t) for t in self.theta]
+        predictions = [sum(x_i[j] * theta_sec[j] for j in range(len(theta_sec))) for x_i in X_input]
+
+        try:
+            preds_open = await mpc.output(predictions)
+            return [float(p) for p in preds_open]
+        except Exception as e:
+            print(f"[Party {mpc.pid}] ❗ ERROR during prediction output: {e}")
+            return []
