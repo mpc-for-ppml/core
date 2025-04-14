@@ -3,11 +3,12 @@
 import sys
 import time
 from mpyc.runtime import mpc
-from modules.mpc.linear import SecureLinearRegression, DEFAULT_EPOCHS, DEFAULT_LR
+from modules.mpc.linear import SecureLinearRegression
 from modules.mpc.logistic import SecureLogisticRegression
 from modules.psi.multiparty_psi import run_n_party_psi
 from modules.psi.party import Party
 from utils.cli_parser import parse_cli_args
+from utils.constant import DEFAULT_EPOCHS, DEFAULT_LR
 from utils.data_loader import load_party_data_adapted
 from utils.data_normalizer import normalize_features
 from utils.visualization import plot_actual_vs_predicted, plot_logistic_evaluation_report

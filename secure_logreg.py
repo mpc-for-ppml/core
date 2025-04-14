@@ -2,8 +2,9 @@
 
 import sys
 from mpyc.runtime import mpc
-from modules.mpc.logistic import SecureLogisticRegression, DEFAULT_EPOCHS, DEFAULT_LR
+from modules.mpc.logistic import SecureLogisticRegression
 from utils.cli_parser import parse_cli_args
+from utils.constant import DEFAULT_EPOCHS, DEFAULT_LR
 from utils.data_loader import load_party_data
 from utils.data_normalizer import normalize_features
 from utils.visualization import plot_logistic_evaluation_report

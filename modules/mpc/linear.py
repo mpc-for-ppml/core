@@ -1,10 +1,7 @@
 # modules/mpc/linear.py
 
 from mpyc.runtime import mpc
-
-# Default values — same as your function signature
-DEFAULT_EPOCHS = 200
-DEFAULT_LR = 0.01
+from utils.constant import DEFAULT_EPOCHS, DEFAULT_LR
 
 class SecureLinearRegression:
     def __init__(self, epochs=DEFAULT_EPOCHS, lr=DEFAULT_LR):

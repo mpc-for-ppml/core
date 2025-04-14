@@ -2,8 +2,9 @@
 
 import sys
 from mpyc.runtime import mpc
-from modules.mpc.linear import SecureLinearRegression, DEFAULT_EPOCHS, DEFAULT_LR
+from modules.mpc.linear import SecureLinearRegression
 from utils.cli_parser import parse_cli_args
+from utils.constant import DEFAULT_EPOCHS, DEFAULT_LR
 from utils.data_loader import load_party_data
 from utils.data_normalizer import normalize_features
 from utils.visualization import plot_actual_vs_predicted
