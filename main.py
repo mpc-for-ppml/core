@@ -3,8 +3,8 @@
 import sys
 import time
 from mpyc.runtime import mpc
-from modules.mpc.linear_gd import secure_linear_regression, DEFAULT_EPOCHS, DEFAULT_LR
-from modules.mpc.logistic import secure_logistic_regression, approx_sigmoid
+from modules.mpc.linear import SecureLinearRegression, DEFAULT_EPOCHS, DEFAULT_LR
+from modules.mpc.logistic import SecureLogisticRegression
 from modules.psi.multiparty_psi import run_n_party_psi
 from modules.psi.party import Party
 from utils.cli_parser import parse_cli_args
@@ -138,7 +138,7 @@ async def main():
     # X_all = [ [age, income, purchase_history, web_visits], ... ] for intersecting users
     # y_all = [ purchase_amount, ... ] only from Org A
 
-    # Step 3: Do linear regression
+    # Step 3: Do regression
     # Step 3.1: Add bias coeff to X
     X_all = [row + [1.0] for row in X_all]
     
@@ -170,20 +170,19 @@ async def main():
     # Step 3.2: Run the regression
     print(f"\n[Party {party_id}] ⚙️ Running {regression_type} regression on the data...")    
     if regression_type == 'logistic':
-        theta = await secure_logistic_regression([X_all], [y_all], epochs=epochs, lr=lr)
+        model = SecureLogisticRegression(epochs=epochs, lr=lr)
     else:
-        theta = await secure_linear_regression([X_all], [y_all], epochs=epochs, lr=lr)
+        model = SecureLinearRegression(epochs=epochs, lr=lr)
+    
+    await model.fit([X_all], [y_all])
 
-    # Step 4: Output result
-    print(f"[Party {party_id}] ✅ Final theta (model weights): {theta}")
-
-    # Step 5: Evaluation
+    # Step 4: Evaluation
+    # predict the train data
+    predictions = await model.predict([X_all][0])
     if regression_type == 'logistic':
-        await plot_logistic_evaluation_report(X_all, y_all, theta, approx_sigmoid, mpc)
+        await plot_logistic_evaluation_report(y_all, predictions, mpc)
     else:
-        if mpc.pid == 0:
-            print(f"\n[Party {party_id}] 📊 Visualizing results (Only on Party 0)...")
-            plot_actual_vs_predicted(X_all, y_all, theta)
+        await plot_actual_vs_predicted(y_all, predictions, mpc)
 
     await mpc.shutdown()
 
