@@ -1,3 +1,5 @@
+# secure_logreg.py
+
 import sys
 from mpyc.runtime import mpc
 from modules.mpc.logistic import secure_logistic_regression, approx_sigmoid, DEFAULT_EPOCHS, DEFAULT_LR

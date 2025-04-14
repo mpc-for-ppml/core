@@ -1,3 +1,5 @@
+# secure_linreg.py
+
 import sys
 from mpyc.runtime import mpc
 from modules.mpc.linear_gd import secure_linear_regression, DEFAULT_EPOCHS, DEFAULT_LR

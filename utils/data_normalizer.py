@@ -1,4 +1,5 @@
 # utils/data_normalizer.py
+
 import sys
 
 def minmax_normalize(X):
