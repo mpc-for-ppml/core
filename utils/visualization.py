@@ -1,10 +1,19 @@
+# utils/visualization.py
+
 import matplotlib.pyplot as plt
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_squared_error, r2_score, classification_report, roc_curve, roc_auc_score
 import math
 
 def plot_actual_vs_predicted(X, y, theta):
-    """Plot actual vs predicted target values and show evaluation metrics."""
+    """
+    Plot actual vs predicted target values and show RMSE & R² Score.
 
+    Args:
+        X: Feature matrix (list of lists, each includes bias term).
+        y: True target values (list).
+        theta: Trained weights (bias is last element).
+    """
+    # Handle nested secret-shared lists by flattening
     def flatten_row(row):
         while isinstance(row, list):
             if len(row) == 0:
@@ -12,9 +21,11 @@ def plot_actual_vs_predicted(X, y, theta):
             row = row[0]
         return row
 
+    # Extract weights and bias
     weights = [float(w) for w in theta[:-1]]
     bias = float(theta[-1])
 
+    # Remove bias term from feature vectors, flatten if needed
     X_no_bias = [
         [float(flatten_row(val)) for val in row[:-1]]
         for row in X
@@ -22,6 +33,7 @@ def plot_actual_vs_predicted(X, y, theta):
 
     y_true = [float(flatten_row(val)) for val in y]
 
+    # Compute predicted values (dot product + bias)
     y_pred = [
         sum(w * x for w, x in zip(weights, row)) + bias
         for row in X_no_bias
@@ -32,7 +44,7 @@ def plot_actual_vs_predicted(X, y, theta):
     rmse = math.sqrt(mse)
     r2 = r2_score(y_true, y_pred)
 
-    # Plotting
+    # Plot: Actual vs Predicted
     plt.figure(figsize=(8, 6))
     plt.scatter(y_true, y_pred, alpha=0.7, edgecolors='k')
     plt.plot([min(y_true), max(y_true)], [min(y_true), max(y_true)], 'r--', label="Ideal")
@@ -45,8 +57,53 @@ def plot_actual_vs_predicted(X, y, theta):
 
     plt.xlabel("Actual")
     plt.ylabel("Predicted")
-    plt.title("Actual vs Predicted")
+    plt.title("Actual vs Predicted (Linear Regression)")
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
     plt.show()
+
+def plot_logistic_evaluation_report(X, y_true, theta, approx_sigmoid_fn, mpc):
+    """
+    Evaluate and visualize logistic regression results.
+
+    Args:
+        X: Feature matrix (already includes bias term).
+        y_true: True binary labels.
+        theta: Model weights (last element is bias).
+        approx_sigmoid_fn: Function to apply approximate sigmoid.
+        mpc: MPyC runtime object (used for awaiting outputs).
+    """
+    async def evaluate():
+        # Predict using sigmoid(dot(x, theta))
+        sigmoid_outputs = []
+        for x in X:
+            dot = sum(a * b for a, b in zip(x, theta))
+            sigmoid = approx_sigmoid_fn(dot)
+            sigmoid_outputs.append(await mpc.output(sigmoid))
+
+        # Convert sigmoid probabilities to binary predictions
+        y_pred = [1 if p >= 0.5 else 0 for p in sigmoid_outputs]
+
+        # Classification report
+        report = classification_report(y_true, y_pred, zero_division=0)
+        print(f"\n[Party {mpc.pid}] 📊 Showing the evaluation report...")
+        print(report)
+
+        # ROC-AUC Curve (only on Party 0)
+        if mpc.pid == 0:
+            fpr, tpr, _ = roc_curve(y_true, y_pred)
+            roc_auc = roc_auc_score(y_true, y_pred)
+
+            plt.figure(figsize=(6, 6))
+            plt.plot(fpr, tpr, color='blue', label=f"AUC = {roc_auc:.2f}")
+            plt.plot([0, 1], [0, 1], color='gray', linestyle='--')
+            plt.xlabel("False Positive Rate")
+            plt.ylabel("True Positive Rate")
+            plt.title("AUC-ROC Curve")
+            plt.legend(loc="lower right")
+            plt.grid(True)
+            plt.tight_layout()
+            plt.show()
+
+    return evaluate()

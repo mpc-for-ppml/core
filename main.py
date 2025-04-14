@@ -1,3 +1,5 @@
+# main.py
+
 import sys
 import time
 from mpyc.runtime import mpc
@@ -8,9 +10,7 @@ from modules.psi.party import Party
 from utils.cli_parser import parse_cli_args
 from utils.data_loader import load_party_data_adapted
 from utils.data_normalizer import normalize_features
-from utils.visualization import plot_actual_vs_predicted
-from sklearn.metrics import classification_report, roc_curve, roc_auc_score
-import matplotlib.pyplot as plt
+from utils.visualization import plot_actual_vs_predicted, plot_logistic_evaluation_report
 
 async def main():    
     args = parse_cli_args(type="main")
@@ -179,40 +179,7 @@ async def main():
 
     # Step 5: Evaluation
     if regression_type == 'logistic':
-        # Predict: Compute sigmoid(dot(x, theta)) for each sample
-        sigmoid_outputs = []
-        for x in X_all:
-            # Dot product manually: sum(x_i * theta_i)
-            dot = sum([a * b for a, b in zip(x, theta)])
-            sigmoid = approx_sigmoid(dot)
-            sigmoid_outputs.append(await mpc.output(sigmoid))
-
-        # Binarize predictions
-        binary_preds = [1 if p >= 0.5 else 0 for p in sigmoid_outputs]
-        y_true = y_all
-        y_pred = binary_preds
-
-        # Generate the classification report
-        report = classification_report(y_true, y_pred, zero_division=0)
-
-        # Print the classification report
-        print(f"\n[Party {mpc.pid}] 📊 Showing the evaluation report...")
-        print(report)
-        
-        if mpc.pid == 0:            
-            fpr, tpr, thresholds = roc_curve(y_true, y_pred)
-            roc_auc = roc_auc_score(y_true, y_pred)
-
-            # Plot
-            plt.figure(figsize=(6, 6))
-            plt.plot(fpr, tpr, color='blue', label=f"AUC = {roc_auc:.2f}")
-            plt.plot([0, 1], [0, 1], color='gray', linestyle='--')  # Baseline (random guessing)
-            plt.xlabel("False Positive Rate")
-            plt.ylabel("True Positive Rate")
-            plt.title("AUC-ROC Curve")
-            plt.legend(loc="lower right")
-            plt.grid(True)
-            plt.show()
+        await plot_logistic_evaluation_report(X_all, y_all, theta, approx_sigmoid, mpc)
     else:
         if mpc.pid == 0:
             print(f"\n[Party {party_id}] 📊 Visualizing results (Only on Party 0)...")
