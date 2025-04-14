@@ -1,3 +1,5 @@
+# modules/psi/party.py
+
 from .ecc import generate_private_key, encrypt_point, hash_to_point
 
 class Party:
