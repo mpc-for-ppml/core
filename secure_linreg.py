@@ -71,9 +71,7 @@ async def main():
     predictions = await model.predict([X_all][0])
 
     # Only visualize if you are party 0
-    if mpc.pid == 0:
-        print(f"\n[Party {mpc.pid}] 📊 Visualizing results (Only on Party 0)...")
-        plot_actual_vs_predicted(y_all, predictions)
+    await plot_actual_vs_predicted(y_all, predictions, mpc)
 
     await mpc.shutdown()
 

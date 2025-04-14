@@ -2,7 +2,7 @@
 
 import sys
 from mpyc.runtime import mpc
-from modules.mpc.logistic import secure_logistic_regression, approx_sigmoid, DEFAULT_EPOCHS, DEFAULT_LR
+from modules.mpc.logistic import SecureLogisticRegression, DEFAULT_EPOCHS, DEFAULT_LR
 from utils.cli_parser import parse_cli_args
 from utils.data_loader import load_party_data
 from utils.data_normalizer import normalize_features
@@ -64,13 +64,14 @@ async def main():
 
     # Run secure regression
     print(f"\n[Party {mpc.pid}] ⚙️ Running logistic regression to the data...")
-    theta = await secure_logistic_regression([X_all], [y_all], epochs=epochs, lr=lr)
+    model = SecureLogisticRegression(epochs=epochs, lr=lr)
+    await model.fit([X_all], [y_all])
 
-    # Output result
-    print(f"\n[Party {mpc.pid}] ✅ Final theta (model weights): {theta}")
+    # Try to predict the train data
+    predictions = await model.predict([X_all][0])
     
-    # Evaluation report
-    await plot_logistic_evaluation_report(X_all, y_all, theta, approx_sigmoid, mpc)
+    # Evaluation report, only visualize if you are party 0
+    await plot_logistic_evaluation_report(y_all, predictions, mpc)
 
     await mpc.shutdown()
 
