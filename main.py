@@ -9,7 +9,8 @@ from utils.cli_parser import parse_cli_args
 from utils.data_loader import load_party_data_adapted
 from utils.data_normalizer import normalize_features
 from utils.visualization import plot_actual_vs_predicted
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, roc_curve, roc_auc_score
+import matplotlib.pyplot as plt
 
 async def main():    
     args = parse_cli_args(type="main")
@@ -197,6 +198,21 @@ async def main():
         # Print the classification report
         print(f"\n[Party {mpc.pid}] 📊 Showing the evaluation report...")
         print(report)
+        
+        if mpc.pid == 0:            
+            fpr, tpr, thresholds = roc_curve(y_true, y_pred)
+            roc_auc = roc_auc_score(y_true, y_pred)
+
+            # Plot
+            plt.figure(figsize=(6, 6))
+            plt.plot(fpr, tpr, color='blue', label=f"AUC = {roc_auc:.2f}")
+            plt.plot([0, 1], [0, 1], color='gray', linestyle='--')  # Baseline (random guessing)
+            plt.xlabel("False Positive Rate")
+            plt.ylabel("True Positive Rate")
+            plt.title("AUC-ROC Curve")
+            plt.legend(loc="lower right")
+            plt.grid(True)
+            plt.show()
     else:
         if mpc.pid == 0:
             print(f"\n[Party {party_id}] 📊 Visualizing results (Only on Party 0)...")
