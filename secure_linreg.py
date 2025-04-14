@@ -2,7 +2,7 @@
 
 import sys
 from mpyc.runtime import mpc
-from modules.mpc.linear_gd import secure_linear_regression, DEFAULT_EPOCHS, DEFAULT_LR
+from modules.mpc.linear import SecureLinearRegression, DEFAULT_EPOCHS, DEFAULT_LR
 from utils.cli_parser import parse_cli_args
 from utils.data_loader import load_party_data
 from utils.data_normalizer import normalize_features
@@ -64,15 +64,16 @@ async def main():
 
     # Run secure regression
     print(f"\n[Party {mpc.pid}] ⚙️ Running linear regression to the data...")
-    theta = await secure_linear_regression([X_all], [y_all], epochs=epochs, lr=lr)
-
-    # Output result
-    print(f"\n[Party {mpc.pid}] ✅ Final theta (model weights): {theta}")
+    model = SecureLinearRegression(epochs=epochs, lr=lr)
+    await model.fit([X_all], [y_all])
+    
+    # Try to predict the train data
+    predictions = await model.predict([X_all][0])
 
     # Only visualize if you are party 0
     if mpc.pid == 0:
         print(f"\n[Party {mpc.pid}] 📊 Visualizing results (Only on Party 0)...")
-        plot_actual_vs_predicted(X_all, y_all, theta)
+        plot_actual_vs_predicted(y_all, predictions)
 
     await mpc.shutdown()
 
