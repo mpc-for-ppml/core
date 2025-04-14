@@ -2,13 +2,14 @@ import sys
 import time
 from mpyc.runtime import mpc
 from modules.mpc.linear_gd import secure_linear_regression, DEFAULT_EPOCHS, DEFAULT_LR
-from modules.mpc.logistic import secure_logistic_regression
+from modules.mpc.logistic import secure_logistic_regression, approx_sigmoid
 from modules.psi.multiparty_psi import run_n_party_psi
 from modules.psi.party import Party
 from utils.cli_parser import parse_cli_args
 from utils.data_loader import load_party_data_adapted
 from utils.data_normalizer import normalize_features
 from utils.visualization import plot_actual_vs_predicted
+from sklearn.metrics import classification_report
 
 async def main():    
     args = parse_cli_args(type="main")
@@ -167,18 +168,39 @@ async def main():
     
     # Step 3.2: Run the regression
     print(f"\n[Party {party_id}] ⚙️ Running {regression_type} regression on the data...")    
-    if regression_type == 'linear':
-        theta = await secure_linear_regression([X_all], [y_all], epochs=epochs, lr=lr)
-    elif regression_type == 'logistic':
+    if regression_type == 'logistic':
         theta = await secure_logistic_regression([X_all], [y_all], epochs=epochs, lr=lr)
+    else:
+        theta = await secure_linear_regression([X_all], [y_all], epochs=epochs, lr=lr)
 
     # Step 4: Output result
     print(f"[Party {party_id}] ✅ Final theta (model weights): {theta}")
 
-    # Step 5: Only visualize if you are party 0    
-    if mpc.pid == 0:
-        print(f"\n[Party {party_id}] 📊 Visualizing results (Only on Party 0)...")
-        plot_actual_vs_predicted(X_all, y_all, theta)
+    # Step 5: Evaluation
+    if regression_type == 'logistic':
+        # Predict: Compute sigmoid(dot(x, theta)) for each sample
+        sigmoid_outputs = []
+        for x in X_all:
+            # Dot product manually: sum(x_i * theta_i)
+            dot = sum([a * b for a, b in zip(x, theta)])
+            sigmoid = approx_sigmoid(dot)
+            sigmoid_outputs.append(await mpc.output(sigmoid))
+
+        # Binarize predictions
+        binary_preds = [1 if p >= 0.5 else 0 for p in sigmoid_outputs]
+        y_true = y_all
+        y_pred = binary_preds
+
+        # Generate the classification report
+        report = classification_report(y_true, y_pred, zero_division=0)
+
+        # Print the classification report
+        print(f"\n[Party {mpc.pid}] 📊 Showing the evaluation report...")
+        print(report)
+    else:
+        if mpc.pid == 0:
+            print(f"\n[Party {party_id}] 📊 Visualizing results (Only on Party 0)...")
+            plot_actual_vs_predicted(X_all, y_all, theta)
 
     await mpc.shutdown()
 
