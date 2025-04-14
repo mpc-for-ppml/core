@@ -32,7 +32,14 @@ def load_party_data_adapted(filename):
         header = next(reader)
 
         user_id_idx = header.index("user_id")
-        label_idx = header.index("purchase_amount") if "purchase_amount" in header else None
+        label_col_candidates = ["will_purchase", "purchase_amount"]
+        label_idx = None
+        for col in label_col_candidates:
+            if col in header:
+                label_idx = header.index(col)
+                label_name = col
+                break
+            
         if label_idx is not None:
             label_name = header[label_idx]
 
