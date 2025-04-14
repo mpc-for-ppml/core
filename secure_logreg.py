@@ -6,7 +6,7 @@ from modules.mpc.logistic import secure_logistic_regression, approx_sigmoid, DEF
 from utils.cli_parser import parse_cli_args
 from utils.data_loader import load_party_data
 from utils.data_normalizer import normalize_features
-from sklearn.metrics import classification_report
+from utils.visualization import plot_logistic_evaluation_report
 
 async def main():
     args = parse_cli_args(type="secure_logreg")
@@ -69,25 +69,8 @@ async def main():
     # Output result
     print(f"\n[Party {mpc.pid}] ✅ Final theta (model weights): {theta}")
     
-    # Predict: Compute sigmoid(dot(x, theta)) for each sample
-    sigmoid_outputs = []
-    for x in X_all:
-        # Dot product manually: sum(x_i * theta_i)
-        dot = sum([a * b for a, b in zip(x, theta)])
-        sigmoid = approx_sigmoid(dot)
-        sigmoid_outputs.append(await mpc.output(sigmoid))
-
-    # Binarize predictions
-    binary_preds = [1 if p >= 0.5 else 0 for p in sigmoid_outputs]
-    y_true = y_all
-    y_pred = binary_preds
-
-    # Generate the classification report
-    report = classification_report(y_true, y_pred, zero_division=0)
-
-    # Print the classification report
-    print(f"\n[Party {mpc.pid}] 📊 Showing the evaluation report...")
-    print(report)
+    # Evaluation report
+    await plot_logistic_evaluation_report(X_all, y_all, theta, approx_sigmoid, mpc)
 
     await mpc.shutdown()
 
